@@ -8,7 +8,7 @@ __version__   = "2.7.7"
 import logging
 import MySQLdb
 
-class database():
+class Database():
     """
     MySQL phpmyadmin python database manipulation module
 
@@ -38,28 +38,65 @@ class database():
         """
         Connect to a database
         """
-        self.db = MySQLdb.connect(host=self.ip, user=self.username, passwd=self.pwd, db=self.database)
+        self.db = MySQLdb.connect(host=self.ip, port=self.port, user=self.username, passwd=self.pwd, db=self.database)
         self.cur = self.db.cursor()
 
+    def db_close(self):
+        """"
+        Close database connection
+        """
+        self.db.close()
 
-    def db_push(self):
+    def db_push(self, sql_index):
         """
         Push data to a MySQL database
-        """
-
-    def db_pull(self, sql_index=None, table=None):
-        """
-        Pull data from a MySQL database
 
         args = {
-                    sql_index: SQL command
-                    table: database table to retrieve from
+                    sql_query: the string SQL query to execute (e.g. "SELECT * FROM <your_db_table> WHERE IP LIKE "1.2.3.4")
                 }
         """
-        #attempting an example
-        self.cur.execute("SELECT * FROM {0} WHERE 1".format(table))
-        for row in self.cur.fetchall():
-            print row[1]
+        try:
+            #simply execute the user defined SQL query
+            self.cur.execute(sql_index)
+            #then commit it up
+            self.db.commit()
+            #return a row count and the response from the query in the form of list
+        except MySQLdb.Error, e:
+            print e
+            db.rollback()
+
+    def db_pull_(self, table, select_item='*', sql_index=1):
+        """
+        A basic method to pull data from a MySQL database
+
+        args = {
+                    table: database table to retrieve from
+                    select_item: what to select generally a column
+                    sql_index: SQL command
+                }
+
+        Currently just returns a row count and a list with the selected data
+        """
+        #execute the SQL query using the defined select item, table, and sql_index
+        self.cur.execute("SELECT {0} FROM {1} WHERE {2}".format(select_item, table, sql_index))
+        #return a row count and the response from the query in the form of list
+        return(self.cur.rowcount, self.cur.fetchall())
+
+    def db_pull(self, sql_query):
+        """
+        A basic method to pull data from a MySQL database
+
+        args = {
+                    sql_query: the string SQL query to execute (e.g. "SELECT * FROM <your_db_table> WHERE IP LIKE "1.2.3.4")
+                }
+
+        This method offers a bit more flexibility and power
+        Currently just returns a row count and a list with the selected data
+        """
+        #simply execute the user defined SQL query
+        self.cur.execute(sql_query)
+        #return a row count and the response from the query in the form of list
+        return(self.cur.rowcount, self.cur.fetchall())
 
     def db_truncate(self):
         """
@@ -82,8 +119,27 @@ if __name__ == '__main__':
     db_table = 'temperature'
     db_username = 'pqgen'
     db_pwd = 'pqgen'
+    #pull vars
+    sql_query_pull = "SELECT * FROM {0} WHERE `tempDegFahrenheit` >= {1}".format(db_table, 100)
+    #push vars
+    colmns = "(`ip`, `shelfSlotSensor`, `tempDegCelsius`, `tempDegFahrenheit`, `timeStamp`)"
+    values = ('1.2.3.4', '1/2/3', '123', '456', '2016.02.12-16.54.16')
+    sql_query_push = "INSERT INTO {0} {1} VALUES {2}".format(db_table, colmns, values)
+
 
     #initiate an instance
-    instance = database(db_ip, db_port, db_database, db_username, db_pwd)
+    instance = Database(db_ip, db_port, db_database, db_username, db_pwd)
+    #connect to the database
     instance.db_connect()
-    instance.db_pull(table=db_table)
+
+    ##pull##
+    #method 1 - (use method 2)
+    instance.db_pull_(table=db_table)
+    #method 2 - (use method 2)
+    instance.db_pull(sql_query_pull)
+
+    ##push##
+    instance.db_push(sql_query_push)
+
+    #close out that db connection
+    instance.db_close()
