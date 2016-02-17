@@ -79,8 +79,9 @@ class Database():
         """
         #execute the SQL query using the defined select item, table, and sql_index
         self.cur.execute("SELECT {0} FROM {1} WHERE {2}".format(select_item, table, sql_index))
-        #return a row count and the response from the query in the form of list
-        return(self.cur.rowcount, self.cur.fetchall())
+        #return a row count (returns a long object - format to string) and the response from the query in the form of list
+        row_count = str(self.cur.rowcount)
+        return(row_count, self.cur.fetchall())
 
     def db_pull(self, sql_query):
         """
@@ -96,7 +97,8 @@ class Database():
         #simply execute the user defined SQL query
         self.cur.execute(sql_query)
         #return a row count and the response from the query in the form of list
-        return(self.cur.rowcount, self.cur.fetchall())
+        row_count = str(self.cur.rowcount)
+        return(row_count, self.cur.fetchall())
 
     def db_truncate(self):
         """
@@ -134,10 +136,12 @@ if __name__ == '__main__':
 
     ##pull##
     #method 1 - (use method 2)
-    instance.db_pull_(table=db_table)
+    query_response = instance.db_pull_(table=db_table)
+    #print query_response
     #method 2 - (use method 2)
-    instance.db_pull(sql_query_pull)
-
+    query_response = instance.db_pull(sql_query_pull)
+    print "Row count: " + query_response[0]
+    #print query_response[1]
     ##push##
     instance.db_push(sql_query_push)
 
