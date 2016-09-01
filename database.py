@@ -7,6 +7,7 @@ __version__   = "2.7.7"
 
 import logging
 import MySQLdb
+import MySQLdb.cursors
 
 class Database():
     """
@@ -18,13 +19,14 @@ class Database():
                 database: the database name
                 username: database username credential
                 password: database password credential
+                output: the return output data format [dict|tuple]
             }
 
     Requires MySQLdb module - try 'pip install mysqlclient'
     Ideally requires external file containing hashed credentials
     """
 
-    def __init__(self, ip, port, database, username, pwd):
+    def __init__(self, ip, port, database, username, pwd, output=tuple):
         """
         Class initialization
         """
@@ -33,12 +35,19 @@ class Database():
         self.database = database
         self.username = username
         self.pwd = pwd
+        self.output = output
 
     def db_connect(self):
         """
         Connect to a database
         """
-        self.db = MySQLdb.connect(host=self.ip, port=self.port, user=self.username, passwd=self.pwd, db=self.database)
+        if self.output is tuple:
+            self.db = MySQLdb.connect(host=self.ip, port=self.port, user=self.username, passwd=self.pwd, db=self.database)
+        elif self.output is dict:
+            self.db = MySQLdb.connect(host=self.ip, port=self.port, user=self.username, passwd=self.pwd, db=self.database, cursorclass=MySQLdb.cursors.DictCursor)
+        else:
+            raise AssertionError("unsupported data output format - options: [dict|tuple]")   
+        # self.db = MySQLdb.connect(host=self.ip, port=self.port, user=self.username, passwd=self.pwd, db=self.database)
         self.cur = self.db.cursor()
 
     def db_close(self):
@@ -63,7 +72,7 @@ class Database():
             #return a row count and the response from the query in the form of list
         except MySQLdb.Error, e:
             print e
-            db.rollback()
+            self.db.rollback()
 
     def db_pull_(self, table, select_item='*', sql_index=1):
         """
@@ -75,7 +84,7 @@ class Database():
                     sql_index: SQL command
                 }
 
-        Currently just returns a row count and a list with the selected data
+        Returns data tuple and row count
         """
         #execute the SQL query using the defined select item, table, and sql_index
         self.cur.execute("SELECT {0} FROM {1} WHERE {2}".format(select_item, table, sql_index))
@@ -92,7 +101,7 @@ class Database():
                 }
 
         This method offers a bit more flexibility and power
-        Currently just returns a row count and a list with the selected data
+        Returns data tuple and row count
         """
         #simply execute the user defined SQL query
         self.cur.execute(sql_query)
@@ -116,11 +125,15 @@ if __name__ == '__main__':
 
     #initialize some example variables
     db_ip = '10.21.1.181'
+    # db_ip = '172.22.109.75'
     db_port = 3306
     db_database = 'bsmEoxLoadTestBed'
     db_table = 'temperature'
     db_username = 'pqgen'
     db_pwd = 'pqgen'
+    output = dict
+    # db_username = 'root'
+    # db_pwd = 'root'
     #pull vars
     sql_query_pull = "SELECT * FROM {0} WHERE `tempDegFahrenheit` >= {1}".format(db_table, 100)
     #push vars
@@ -130,20 +143,29 @@ if __name__ == '__main__':
 
 
     #initiate an instance
-    instance = Database(db_ip, db_port, db_database, db_username, db_pwd)
+    instance = Database(db_ip, db_port, db_database, db_username, db_pwd, output)
     #connect to the database
     instance.db_connect()
 
-    ##pull##
-    #method 1 - (use method 2)
-    query_response = instance.db_pull_(table=db_table)
-    #print query_response
+    # # ##pull##
+    # # #method 1 - (use method 2)
+    # # query_response = instance.db_pull_(table=db_table)
+    # # #print query_response
     #method 2 - (use method 2)
     query_response = instance.db_pull(sql_query_pull)
     print "Row count: " + query_response[0]
-    #print query_response[1]
-    ##push##
-    instance.db_push(sql_query_push)
+    print query_response[1]
+    # # ##push##
+    # # instance.db_push(sql_query_push)
 
-    #close out that db connection
+    # #close out that db connection
     instance.db_close()
+
+    # db_ip = 'td-almhp'
+    # db_port = 3306
+    # db_username = 'jnmcclai'
+    # db_database = 'td.TEST_PARAMS WHERE'
+    # #initiate an instance
+    # instance = Database(db_ip, db_port, db_database, db_username, db_pwd)
+    # #connect to the database
+    # instance.db_connect()
